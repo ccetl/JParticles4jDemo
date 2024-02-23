@@ -20,7 +20,7 @@ configurations {
 }
 
 dependencies {
-    shade "com.github.ccetl:jparticles4j:1.0"
+    shade "com.github.ccetl:jparticles4j:1.0.1"
     shade "org.openjfx:javafx:21"
 }
 

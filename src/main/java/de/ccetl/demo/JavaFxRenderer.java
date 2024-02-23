@@ -1,6 +1,7 @@
 package de.ccetl.demo;
 
 import de.ccetl.jparticles.core.Renderer;
+import de.ccetl.jparticles.util.Vec2d;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class JavaFxRenderer implements Renderer {
-    private static final Map<Integer, ImageView> IMAGE_MAP = new HashMap<>();
+    protected static final Map<Integer, ImageView> IMAGE_MAP = new HashMap<>();
     private final GraphicsContext gc;
 
     public JavaFxRenderer(GraphicsContext gc) {
@@ -22,6 +23,14 @@ public class JavaFxRenderer implements Renderer {
         gc.setStroke(Color.rgb((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, ((color >> 24) & 0xFF) / 255D));
         gc.setLineWidth(width);
         gc.strokeLine(x, y, x1, y1);
+    }
+
+    static {
+        new Thread(() -> {
+            IMAGE_MAP.put(1, new ImageView(new Image("https://raw.githubusercontent.com/Barrior/assets/main/bubble-colorful.png")));
+            IMAGE_MAP.put(2, new ImageView(new Image("https://raw.githubusercontent.com/Barrior/assets/main/gift.png")));
+            IMAGE_MAP.put(3, new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/25/25231.png")));
+        }).start();
     }
 
     @Override
@@ -62,7 +71,7 @@ public class JavaFxRenderer implements Renderer {
             xPoints[i] = x + r * Math.cos(angle);
             yPoints[i] = y + r * Math.sin(angle);
         }
-        gc.fillPolygon(xPoints, yPoints, (int) (2 * sides));
+        gc.fillPolygon(xPoints, yPoints, 2 * sides);
     }
 
     @Override
@@ -70,10 +79,27 @@ public class JavaFxRenderer implements Renderer {
         gc.drawImage(IMAGE_MAP.get(id).getImage(), x - radius, y - radius, radius * 2, radius * 2);
     }
 
-    static {
-        new Thread(() -> {
-            IMAGE_MAP.put(1, new ImageView(new Image("https://raw.githubusercontent.com/Barrior/assets/main/bubble-colorful.png")));
-            IMAGE_MAP.put(2, new ImageView(new Image("https://raw.githubusercontent.com/Barrior/assets/main/gift.png")));
-        }).start();
+    @Override
+    public void drawLine(Vec2d[] points, double width, int color) {
+        gc.setStroke(Color.rgb((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF));
+        gc.setLineWidth(width);
+        gc.beginPath();
+        gc.moveTo(points[0].getX(), points[0].getY());
+        for (int i = 1; i < points.length; i++) {
+            gc.lineTo(points[i].getX(), points[i].getY());
+        }
+        gc.stroke();
+    }
+
+    @Override
+    public void drawPolygon(Vec2d[] points, int color) {
+        gc.setFill(Color.rgb((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF));
+        gc.beginPath();
+        gc.moveTo(points[0].getX(), points[0].getY());
+        for (int i = 1; i < points.length; i++) {
+            gc.lineTo(points[i].getX(), points[i].getY());
+        }
+        gc.closePath();
+        gc.fill();
     }
 }

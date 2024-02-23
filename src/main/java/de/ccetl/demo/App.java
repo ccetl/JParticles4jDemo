@@ -7,10 +7,12 @@ import de.ccetl.jparticles.event.MouseEvent;
 import de.ccetl.jparticles.systems.LineSystem;
 import de.ccetl.jparticles.systems.ParticleSystem;
 import de.ccetl.jparticles.systems.SnowSystem;
+import de.ccetl.jparticles.systems.WaveSystem;
 import de.ccetl.jparticles.types.particle.Direction;
 import de.ccetl.jparticles.types.particle.LineShape;
 import de.ccetl.jparticles.types.particle.Obstacle;
 import de.ccetl.jparticles.types.particle.SpawnRegion;
+import de.ccetl.jparticles.types.wave.WaveArgument;
 import de.ccetl.jparticles.util.Utils;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
@@ -20,6 +22,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -27,6 +30,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -36,6 +41,7 @@ public class App extends Application {
     private BorderPane particles;
     private BorderPane snow;
     private BorderPane lines;
+    private BorderPane waves;
     private AnimationTimer timer;
     private Effect current;
     private LineSystem line;
@@ -59,6 +65,70 @@ public class App extends Application {
         stage.setScene(scene);
         stage.show();
         initialized = true;
+    }
+
+    private void initWaves() {
+        waves = new BorderPane();
+        Canvas canvas = new Canvas(1600, 1000);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        WaveSystem.DefaultConfig config = new WaveSystem.DefaultConfig() {
+            @Override
+            public Renderer getRenderer() {
+                return new JavaFxRenderer(gc);
+            }
+        };
+        WaveSystem wave = new WaveSystem(config, 1600, 1000);
+        waves.getChildren().add(canvas);
+        wave.start();
+
+        ScrollPane scrollPane = new ScrollPane();
+        VBox sidebar = new VBox();
+        sidebar.setPadding(new Insets(10));
+        sidebar.setSpacing(10);
+
+        AtomicBoolean mask = new AtomicBoolean(false);
+
+        addSwitch(sidebar);
+        addButton(sidebar, "Reset", wave::bootstrap);
+        addButton(sidebar, "Pause", wave::pause);
+        addButton(sidebar, "Start", wave::start);
+        addSlider(sidebar, "Number", config.getNumber(), 0, 100, v -> config.setNumber(v.intValue()));
+        addCheckBox(sidebar, "Fill", config.isFill().get(0), v -> config.setFill(new WaveArgument<>(() -> v)));
+        addCheckBox(sidebar, "Line", config.isLine().get(0), v -> config.setLine(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Line Width", config.getLineWidth().get(0), 0, 10, v -> config.setLineWidth(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Offset Left", config.getOffsetLeft().get(0), 0, 1800, v -> config.setOffsetLeft(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Offset Top", config.getOffsetTop().get(0), 0, 1000, v -> config.setOffsetTop(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Crest Height", config.getCrestHeight().get(0), 0, 1000, v -> config.setCrestHeight(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Crest Count", config.getCrestCount().get(0), 0, 10000, v -> config.setCrestCount(new WaveArgument<>(() -> v)));
+        addSlider(sidebar, "Speed", config.getSpeed().get(0), 0, 2, v -> config.setSpeed(new WaveArgument<>(() -> v)));
+        addCheckBox(sidebar, "Mask", false, mask::set);
+        addButton(sidebar, "Load Preset", () -> {
+            config.setLineColor(new WaveArgument<>(List.of(getColor255(0, 190, 112, 125), getColor255(0, 190, 112, 190), getColor255(0, 190, 112, 250))));
+            config.setLineWidth(new WaveArgument<>(List.of(0.5, 0.7, 0.9)));
+            config.setOffsetLeft(new WaveArgument<>(List.of(2.0, 1.0, 0.0)));
+            config.setOffsetTop(new WaveArgument<>(() -> 652.0));
+            config.setCrestHeight(new WaveArgument<>(List.of(10.0, 14.0, 18.0)));
+            config.setCrestCount(new WaveArgument<>(() -> 200.0));
+            config.setSpeed(new WaveArgument<>(List.of(0.1, 0.15, 0.09)));
+            wave.bootstrap();
+        });
+
+        scrollPane.setContent(sidebar);
+        scrollPane.setPrefWidth(200);
+        waves.setRight(scrollPane);
+
+        timer = new AnimationTimer() {
+            public void handle(long currentNanoTime) {
+                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                if (mask.get()) {
+                    Image image = JavaFxRenderer.IMAGE_MAP.get(3).getImage();
+                    gc.drawImage(image, 0, 0, image.getWidth(), image.getHeight());
+                    canvas.setClip(JavaFxRenderer.IMAGE_MAP.get(3));
+                }
+                wave.draw(mouseX, mouseY);
+            }
+        };
+        timer.start();
     }
 
     private void initLines() {
@@ -167,7 +237,7 @@ public class App extends Application {
                 gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
                 gc.setFill(Color.LIGHTBLUE);
                 gc.fillRect(0, 0, 1600, 1000);
-                snow.draw(mouseX, mouseY); // Call render on each frame
+                snow.draw(mouseX, mouseY);
             }
         };
         timer.start();
@@ -185,7 +255,7 @@ public class App extends Application {
 
             @Override
             public Supplier<Integer> getColorSupplier() {
-                return () -> getColor(Utils.getRandomInRange(0, 1), Utils.getRandomInRange(0, 1), Utils.getRandomInRange(0, 1), Utils.getRandomInRange(0.3, 1));
+                return () -> getColor255(37, 191, 255, 100);
             }
         };
         ParticleSystem particle = new ParticleSystem(config, 1600, 1000);
@@ -314,11 +384,14 @@ public class App extends Application {
                             line.onMouseCLick(new MouseEvent(mouseX));
                         }
                     });
-                    line.start();
                     break;
                 case PARTICLES:
                     initParticles();
                     scene.set(new Scene(particles, 1800, 1000));
+                    break;
+                case WAVES:
+                    initWaves();
+                    scene.set(new Scene(waves, 1800, 1000));
                     break;
             }
             scene.get().setOnMouseMoved(mouseEvent -> {

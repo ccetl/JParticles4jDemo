@@ -297,6 +297,10 @@ public class App extends Application {
         addSlider(sidebar, "Strength", config.getParallaxStrength(), 0, 100, config::setParallaxStrength);
         addCheckBox(sidebar, "Hover Repulse", config.isHoverRepulse(), config::setHoverRepulse);
         addSlider(sidebar, "Repulse radius", config.getRepulseRadius(), 0, 500, config::setRepulseRadius);
+        addCheckBox(sidebar, "Trail", config.isTrails(), config::setTrails);
+        addSlider(sidebar, "Update Delay", config.getTrailUpdate(), 0, 40, config::setTrailUpdate);
+        addSlider(sidebar, "Alive", config.getTrailAlive(), 0, 5000, config::setTrailAlive);
+        addCheckBox(sidebar, "Shrink", config.isTrailShrink(), config::setTrailShrink);
 
         scrollPane.setContent(sidebar);
         scrollPane.setPrefWidth(200);

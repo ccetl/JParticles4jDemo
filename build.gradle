@@ -7,7 +7,7 @@ plugins {
 apply plugin: 'org.openjfx.javafxplugin'
 
 group = 'de.ccetl'
-version = '1.0'
+version = '1.0.1'
 
 repositories {
     mavenCentral()
@@ -20,7 +20,7 @@ configurations {
 }
 
 dependencies {
-    shade "com.github.ccetl:jparticles4j:1.0.1"
+    shade "com.github.ccetl:jparticles4j:1.0.4"
     shade "org.openjfx:javafx:21"
 }
 
